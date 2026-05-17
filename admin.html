@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AUTOSELECT - Admin catálogo</title>
+  <title>AUTOSELECT - Cat&aacute;logo de veh&iacute;culos</title>
   <style>
     :root {
       color-scheme: light;
@@ -895,17 +895,16 @@
   <input class="hidden" type="file" id="photoInput" accept="image/*" multiple />
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-
+  <script>
     const SUPABASE_URL = "https://wqhjrtornhqhiylorjeu.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_prB3f-6vi4fxQmbE7N-XzQ_ApIW-xEI";
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const PHOTO_BUCKET = "car-images";
     const phone = "34656188878";
     const fallbackImage = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=80";
-    let cars = [];
-
     const heroSlides = [...document.querySelectorAll(".hero-slide")];
     let heroSlideIndex = 0;
+
     if (heroSlides.length > 1) {
       setInterval(() => {
         heroSlides[heroSlideIndex].classList.remove("active");
@@ -913,6 +912,65 @@
         heroSlides[heroSlideIndex].classList.add("active");
       }, 5200);
     }
+
+    const demoCars = [
+      {
+        id: crypto.randomUUID(),
+        title: "Mercedes-Benz Clase C 220d AMG Line",
+        price: 26900,
+        year: 2020,
+        km: 92000,
+        power: 194,
+        engine: 1950,
+        fuel: "Diesel",
+        gear: "Automatico",
+        status: "Disponible",
+        images: [
+          "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=1200&q=80",
+          "https://images.unsplash.com/photo-1553440569-bcc63803a83d?auto=format&fit=crop&w=1200&q=80",
+          "https://images.unsplash.com/photo-1555353540-64580b51c258?auto=format&fit=crop&w=1200&q=80"
+        ],
+        description: "Unidad nacional, cambio automatico, paquete AMG Line, sensores, navegador y mantenimiento al dia."
+      },
+      {
+        id: crypto.randomUUID(),
+        title: "Volkswagen Golf 1.5 TSI R-Line",
+        price: 21400,
+        year: 2021,
+        km: 61000,
+        power: 150,
+        engine: 1498,
+        fuel: "Gasolina",
+        gear: "Manual",
+        status: "Nuevo stock",
+        images: [
+          "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=80",
+          "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80",
+          "https://images.unsplash.com/photo-1541443131876-44b03de101c5?auto=format&fit=crop&w=1200&q=80"
+        ],
+        description: "Acabado R-Line, camara trasera, pantalla multimedia, llantas, muy cuidado y listo para entrega."
+      },
+      {
+        id: crypto.randomUUID(),
+        title: "Toyota C-HR 125H Advance",
+        price: 22900,
+        year: 2019,
+        km: 74000,
+        power: 122,
+        engine: 1798,
+        fuel: "Hibrido",
+        gear: "Automatico",
+        status: "Disponible",
+        images: [
+          "https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1200&q=80",
+          "https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=1200&q=80",
+          "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=80"
+        ],
+        description: "Hibrido automatico, bajo consumo, etiqueta ECO, control de crucero adaptativo y garantia."
+      }
+    ];
+
+    let cars = [];
 
     const els = {
       cars: document.querySelector("#cars"),
@@ -952,38 +1010,174 @@
       fileInput: document.querySelector("#fileInput")
     };
 
-    function carImages(car) {
-      const list = Array.isArray(car.images) ? car.images : [];
-      const legacy = car.image ? [car.image] : [];
-      return [...list, ...legacy].map((item) => String(item || "").trim()).filter(Boolean).slice(0, 10);
-    }
-    function parseImages(value) {
-      return String(value || "").split(/\r?\n/).map((item) => item.trim()).filter(Boolean).slice(0, 10);
-    }
-    function eur(value) { return Number(value || 0).toLocaleString("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }); }
-    function km(value) { return Number(value || 0).toLocaleString("es-ES") + " km"; }
-    function power(value) { return Number(value || 0) ? Number(value).toLocaleString("es-ES") + " CV" : "--"; }
-    function engine(value) { return Number(value || 0) ? Number(value).toLocaleString("es-ES") + " cc" : "--"; }
-    function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;"); }
-    function normalizeText(value) { return String(value ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
-    function displayValue(value) { const labels = { Automatico: "Autom&aacute;tico", Electrico: "El&eacute;ctrico", Hibrido: "H&iacute;brido" }; return labels[value] || escapeHtml(value || "--"); }
-    function badgeClass(status) { if (status === "Reservado") return "reserved"; if (status === "Nuevo stock") return "new"; if (status === "Vendido") return "sold"; return ""; }
-
     async function loadCarsFromSupabase() {
-      if (els.stockCount) els.stockCount.textContent = "Cargando catálogo...";
+      els.stockCount.textContent = "Cargando cat&aacute;logo...";
       const { data, error } = await db.from("cars").select("*").order("created_at", { ascending: false });
       if (error) {
         console.error(error);
-        if (els.stockCount) els.stockCount.textContent = "Error cargando Supabase. Revisa tabla cars y políticas RLS.";
+        els.stockCount.textContent = "Error cargando Supabase. Revisa la tabla cars y las pol&iacute;ticas RLS.";
         cars = [];
-      } else {
-        cars = (data || []).map((car) => ({ ...car, images: Array.isArray(car.images) ? car.images : [] }));
+        renderAll();
+        return;
       }
+      cars = (data || []).map((car) => ({
+        ...car,
+        images: Array.isArray(car.images) ? car.images : []
+      }));
       renderAll();
     }
 
+    function carImages(car) {
+      const list = Array.isArray(car.images) ? car.images : [];
+      const legacy = car.image ? [car.image] : [];
+      return [...list, ...legacy]
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+        .slice(0, 10);
+    }
+
+    function parseImages(value) {
+      return String(value || "")
+        .split(/\r?\n/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .slice(0, 10);
+    }
+
+    function setFormImages(images) {
+      els.images.value = images.slice(0, 10).join("\n");
+      renderPhotoPreview();
+    }
+
+    function renderPhotoPreview() {
+      const images = parseImages(els.images.value);
+      if (!images.length) {
+        els.photoPreview.innerHTML = `<div class="empty">A&ntilde;ade fotos para verlas aqu&iacute;.</div>`;
+        return;
+      }
+      els.photoPreview.innerHTML = images.map((image, index) => `
+        <div class="photo-editor ${index === 0 ? "is-main" : ""}">
+          <img src="${escapeHtml(image)}" alt="Foto ${index + 1}" onerror="this.src='${fallbackImage}'" />
+          ${index === 0 ? `<span class="photo-main-badge">Principal</span>` : ""}
+          <div class="photo-editor-actions">
+            <button class="btn secondary" type="button" data-photo-main="${index}" ${index === 0 ? "disabled" : ""}>Principal</button>
+            <button class="btn danger" type="button" data-photo-delete="${index}">Borrar</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.addEventListener("load", () => resolve(reader.result));
+        reader.addEventListener("error", reject);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.addEventListener("load", () => resolve(image));
+        image.addEventListener("error", reject);
+        image.src = src;
+      });
+    }
+
+    async function imageFileToCatalogDataUrl(file) {
+      const dataUrl = await readFileAsDataUrl(file);
+      const image = await loadImage(dataUrl);
+      const maxSide = 2400;
+      const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+      const width = Math.round(image.width * scale);
+      const height = Math.round(image.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d").drawImage(image, 0, 0, width, height);
+      return canvas.toDataURL("image/jpeg", 0.94);
+    }
+
+    function dataUrlToBlob(dataUrl) {
+      const [meta, base64] = dataUrl.split(",");
+      const mime = (meta.match(/data:(.*?);base64/) || [])[1] || "image/jpeg";
+      const bytes = atob(base64);
+      const array = new Uint8Array(bytes.length);
+      for (let index = 0; index < bytes.length; index += 1) array[index] = bytes.charCodeAt(index);
+      return new Blob([array], { type: mime });
+    }
+
+    async function uploadCatalogImages(images, carId) {
+      const uploaded = [];
+      for (const [index, image] of images.entries()) {
+        if (!String(image).startsWith("data:image/")) {
+          uploaded.push(image);
+          continue;
+        }
+        const blob = dataUrlToBlob(image);
+        const path = `${carId}/${Date.now()}-${index}.jpg`;
+        const { error } = await db.storage.from(PHOTO_BUCKET).upload(path, blob, {
+          contentType: "image/jpeg",
+          upsert: true
+        });
+        if (error) throw error;
+        const { data } = db.storage.from(PHOTO_BUCKET).getPublicUrl(path);
+        uploaded.push(data.publicUrl);
+      }
+      return uploaded;
+    }
+
+    function eur(value) {
+      return Number(value || 0).toLocaleString("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+    }
+
+    function km(value) {
+      return Number(value || 0).toLocaleString("es-ES") + " km";
+    }
+
+    function power(value) {
+      return Number(value || 0) ? Number(value).toLocaleString("es-ES") + " CV" : "--";
+    }
+
+    function engine(value) {
+      return Number(value || 0) ? Number(value).toLocaleString("es-ES") + " cc" : "--";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function normalizeText(value) {
+      return String(value ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+    }
+
+    function displayValue(value) {
+      const labels = {
+        Automatico: "Autom&aacute;tico",
+        Electrico: "El&eacute;ctrico",
+        Hibrido: "H&iacute;brido"
+      };
+      return labels[value] || escapeHtml(value || "--");
+    }
+
+    function badgeClass(status) {
+      if (status === "Reservado") return "reserved";
+      if (status === "Nuevo stock") return "new";
+      if (status === "Vendido") return "sold";
+      return "";
+    }
+
     function sortedCars(list) {
-      const sort = els.sortFilter ? els.sortFilter.value : "featured";
+      const sort = els.sortFilter.value;
       const statusRank = { "Nuevo stock": 0, Disponible: 1, Reservado: 2, Vendido: 3 };
       const sorted = [...list];
       sorted.sort((a, b) => {
@@ -995,12 +1189,13 @@
       });
       return sorted;
     }
+
     function filteredCars() {
-      const q = normalizeText(els.search?.value.trim() || "");
-      const fuel = els.fuelFilter?.value || "";
-      const gear = els.gearFilter?.value || "";
-      const status = els.statusFilter?.value || "";
-      const maxPrice = Number(els.priceFilter?.value || 0);
+      const q = normalizeText(els.search.value.trim());
+      const fuel = els.fuelFilter.value;
+      const gear = els.gearFilter.value;
+      const status = els.statusFilter.value;
+      const maxPrice = Number(els.priceFilter.value || 0);
       const list = cars.filter((car) => {
         const text = normalizeText(`${car.title} ${car.year} ${car.km} ${car.power} ${car.engine} ${car.fuel} ${car.gear} ${car.status} ${car.description}`);
         if (q && !text.includes(q)) return false;
@@ -1012,8 +1207,8 @@
       });
       return sortedCars(list);
     }
+
     function renderFilters() {
-      if (!els.fuelFilter || !els.gearFilter || !els.statusFilter) return;
       const fuels = [...new Set(cars.map((car) => car.fuel).filter(Boolean))];
       const gears = [...new Set(cars.map((car) => car.gear).filter(Boolean))];
       const statuses = [...new Set(cars.map((car) => car.status).filter(Boolean))];
@@ -1021,105 +1216,315 @@
       els.gearFilter.innerHTML = `<option value="">Todos</option>${gears.map((item) => `<option value="${escapeHtml(item)}">${displayValue(item)}</option>`).join("")}`;
       els.statusFilter.innerHTML = `<option value="">En venta</option>${statuses.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join("")}`;
     }
+
     function renderCars() {
       const list = filteredCars();
       const totalForSale = cars.filter((car) => car.status !== "Vendido").length;
-      if (els.stockCount) els.stockCount.innerHTML = `${list.length} veh&iacute;culo${list.length === 1 ? "" : "s"} visible${list.length === 1 ? "" : "s"} de ${totalForSale} en venta`;
-      if (!els.cars) return;
-      if (!list.length) { els.cars.innerHTML = `<div class="empty">No hay veh&iacute;culos con estos filtros.</div>`; return; }
+      els.stockCount.innerHTML = `${list.length} veh&iacute;culo${list.length === 1 ? "" : "s"} visible${list.length === 1 ? "" : "s"} de ${totalForSale} en venta`;
+      if (!list.length) {
+        els.cars.innerHTML = `<div class="empty">No hay veh&iacute;culos con estos filtros.</div>`;
+        return;
+      }
       els.cars.innerHTML = list.map((car) => {
         const whatsapp = `https://wa.me/${phone}?text=${encodeURIComponent(`Hola AUTOSELECT, me interesa este coche: ${car.title} - ${eur(car.price)}. Quiero mas informacion.`)}`;
-        const images = carImages(car); const mainImage = images[0] || fallbackImage; const galleryId = `gallery-${car.id}`;
-        const safeTitle = escapeHtml(car.title || "Vehiculo AUTOSELECT"); const safeStatus = escapeHtml(car.status || "Disponible");
+        const images = carImages(car);
+        const mainImage = images[0] || fallbackImage;
+        const galleryId = `gallery-${car.id}`;
+        const safeTitle = escapeHtml(car.title || "Vehiculo AUTOSELECT");
+        const safeStatus = escapeHtml(car.status || "Disponible");
         const photoText = `${images.length || 1} foto${(images.length || 1) === 1 ? "" : "s"}`;
         return `
-          <article class="car"><div class="car-media"><img id="${escapeHtml(galleryId)}" src="${escapeHtml(mainImage)}" alt="${safeTitle}" loading="lazy" onerror="this.src='${fallbackImage}'" /><span class="badge ${badgeClass(car.status)}">${safeStatus}</span><span class="photo-count">${photoText}</span></div>
-          <div class="car-body"><div class="thumbs">${(images.length ? images : [fallbackImage]).map((image, index) => `<button class="thumb ${index === 0 ? "active" : ""}" type="button" data-gallery="${escapeHtml(galleryId)}" data-image="${escapeHtml(image)}"><img src="${escapeHtml(image)}" alt="${safeTitle} foto ${index + 1}" loading="lazy" onerror="this.src='${fallbackImage}'" /></button>`).join("")}</div>
-          <div class="car-title"><strong>${safeTitle}</strong><div class="price">${eur(car.price)}</div></div>
-          <div class="specs"><div class="spec"><span>A&ntilde;o</span><strong>${car.year || "--"}</strong></div><div class="spec"><span>Kil&oacute;metros</span><strong>${km(car.km)}</strong></div><div class="spec"><span>Potencia</span><strong>${power(car.power)}</strong></div><div class="spec"><span>Cilindrada</span><strong>${engine(car.engine)}</strong></div><div class="spec"><span>Combustible</span><strong>${displayValue(car.fuel)}</strong></div><div class="spec"><span>Cambio</span><strong>${displayValue(car.gear)}</strong></div></div>
-          <div class="description">${escapeHtml(car.description || "Consulta disponibilidad, financiacion y garantia.")}</div><div class="car-actions"><a class="btn" target="_blank" rel="noopener" href="${whatsapp}">WhatsApp</a><a class="btn secondary" href="tel:+34656188878">Llamar</a></div></div></article>`;
+          <article class="car">
+            <div class="car-media">
+              <img id="${escapeHtml(galleryId)}" src="${escapeHtml(mainImage)}" alt="${safeTitle}" loading="lazy" onerror="this.src='${fallbackImage}'" />
+              <span class="badge ${badgeClass(car.status)}">${safeStatus}</span>
+              <span class="photo-count">${photoText}</span>
+            </div>
+            <div class="car-body">
+              <div class="thumbs">
+                ${(images.length ? images : [fallbackImage]).map((image, index) => `
+                  <button class="thumb ${index === 0 ? "active" : ""}" type="button" data-gallery="${escapeHtml(galleryId)}" data-image="${escapeHtml(image)}">
+                    <img src="${escapeHtml(image)}" alt="${safeTitle} foto ${index + 1}" loading="lazy" onerror="this.src='${fallbackImage}'" />
+                  </button>
+                `).join("")}
+              </div>
+              <div class="car-title">
+                <strong>${safeTitle}</strong>
+                <div class="price">${eur(car.price)}</div>
+              </div>
+              <div class="specs">
+                <div class="spec"><span>A&ntilde;o</span><strong>${car.year || "--"}</strong></div>
+                <div class="spec"><span>Kil&oacute;metros</span><strong>${km(car.km)}</strong></div>
+                <div class="spec"><span>Potencia</span><strong>${power(car.power)}</strong></div>
+                <div class="spec"><span>Cilindrada</span><strong>${engine(car.engine)}</strong></div>
+                <div class="spec"><span>Combustible</span><strong>${displayValue(car.fuel)}</strong></div>
+                <div class="spec"><span>Cambio</span><strong>${displayValue(car.gear)}</strong></div>
+              </div>
+              <div class="description">${escapeHtml(car.description || "Consulta disponibilidad, financiacion y garantia.")}</div>
+              <div class="car-actions">
+                <a class="btn" target="_blank" rel="noopener" href="${whatsapp}">WhatsApp</a>
+                <a class="btn secondary" href="tel:+34656188878">Llamar</a>
+              </div>
+            </div>
+          </article>
+        `;
       }).join("");
     }
-    function renderAdminSummary() {
-      if (!els.adminSummary) return;
-      const forSale = cars.filter((car) => car.status !== "Vendido"); const reserved = cars.filter((car) => car.status === "Reservado").length;
-      const avgPrice = forSale.length ? Math.round(forSale.reduce((sum, car) => sum + Number(car.price || 0), 0) / forSale.length) : 0;
-      els.adminSummary.innerHTML = `<div class="admin-stat"><span>Total</span><strong>${cars.length}</strong></div><div class="admin-stat"><span>En venta</span><strong>${forSale.length}</strong></div><div class="admin-stat"><span>Reservados</span><strong>${reserved}</strong></div><div class="admin-stat"><span>Precio medio</span><strong>${eur(avgPrice)}</strong></div>`;
-    }
+
     function renderAdminList() {
-      if (!els.adminList) return;
-      if (!cars.length) { els.adminList.innerHTML = `<div class="empty">Todav&iacute;a no hay coches en el cat&aacute;logo.</div>`; return; }
-      els.adminList.innerHTML = cars.map((car) => `<div class="admin-row"><div><strong>${escapeHtml(car.title)}</strong><span>${eur(car.price)} &middot; ${car.year} &middot; ${km(car.km)} &middot; ${power(car.power)} &middot; ${engine(car.engine)} &middot; ${escapeHtml(car.status)}</span></div><div class="admin-row-actions"><button class="btn secondary" type="button" data-edit="${escapeHtml(car.id)}">Editar</button><button class="btn danger" type="button" data-delete="${escapeHtml(car.id)}">Borrar</button></div></div>`).join("");
+      if (!cars.length) {
+        els.adminList.innerHTML = `<div class="empty">Todav&iacute;a no hay coches en el cat&aacute;logo.</div>`;
+        return;
+      }
+      els.adminList.innerHTML = cars.map((car) => `
+        <div class="admin-row">
+          <div>
+            <strong>${escapeHtml(car.title)}</strong>
+            <span>${eur(car.price)} &middot; ${car.year} &middot; ${km(car.km)} &middot; ${power(car.power)} &middot; ${engine(car.engine)} &middot; ${escapeHtml(car.status)}</span>
+          </div>
+          <div class="admin-row-actions">
+            <button class="btn secondary" type="button" data-edit="${escapeHtml(car.id)}">Editar</button>
+            <button class="btn danger" type="button" data-delete="${escapeHtml(car.id)}">Borrar</button>
+          </div>
+        </div>
+      `).join("");
     }
+
+    function renderAdminSummary() {
+      const forSale = cars.filter((car) => car.status !== "Vendido");
+      const reserved = cars.filter((car) => car.status === "Reservado").length;
+      const avgPrice = forSale.length
+        ? Math.round(forSale.reduce((sum, car) => sum + Number(car.price || 0), 0) / forSale.length)
+        : 0;
+      els.adminSummary.innerHTML = `
+        <div class="admin-stat"><span>Total</span><strong>${cars.length}</strong></div>
+        <div class="admin-stat"><span>En venta</span><strong>${forSale.length}</strong></div>
+        <div class="admin-stat"><span>Reservados</span><strong>${reserved}</strong></div>
+        <div class="admin-stat"><span>Precio medio</span><strong>${eur(avgPrice)}</strong></div>
+      `;
+    }
+
     function renderAll() {
-      const oldFuel = els.fuelFilter?.value || ""; const oldGear = els.gearFilter?.value || ""; const oldStatus = els.statusFilter?.value || "";
+      const oldFuel = els.fuelFilter.value;
+      const oldGear = els.gearFilter.value;
+      const oldStatus = els.statusFilter.value;
       renderFilters();
-      if (els.fuelFilter) els.fuelFilter.value = [...els.fuelFilter.options].some((option) => option.value === oldFuel) ? oldFuel : "";
-      if (els.gearFilter) els.gearFilter.value = [...els.gearFilter.options].some((option) => option.value === oldGear) ? oldGear : "";
-      if (els.statusFilter) els.statusFilter.value = [...els.statusFilter.options].some((option) => option.value === oldStatus) ? oldStatus : "";
-      renderCars(); renderAdminSummary(); renderAdminList();
+      els.fuelFilter.value = [...els.fuelFilter.options].some((option) => option.value === oldFuel) ? oldFuel : "";
+      els.gearFilter.value = [...els.gearFilter.options].some((option) => option.value === oldGear) ? oldGear : "";
+      els.statusFilter.value = [...els.statusFilter.options].some((option) => option.value === oldStatus) ? oldStatus : "";
+      renderCars();
+      renderAdminSummary();
+      renderAdminList();
     }
-    els.cars?.addEventListener("click", (event) => {
-      const thumb = event.target.closest(".thumb"); if (!thumb) return; const main = document.getElementById(thumb.dataset.gallery); if (!main) return;
-      main.src = thumb.dataset.image; thumb.parentElement.querySelectorAll(".thumb").forEach((item) => item.classList.remove("active")); thumb.classList.add("active");
-    });
-    [els.search, els.fuelFilter, els.gearFilter, els.statusFilter, els.priceFilter, els.sortFilter].filter(Boolean).forEach((input) => input.addEventListener("input", renderCars));
-    els.clearFilters?.addEventListener("click", () => {
-      if (els.search) els.search.value = ""; if (els.fuelFilter) els.fuelFilter.value = ""; if (els.gearFilter) els.gearFilter.value = ""; if (els.statusFilter) els.statusFilter.value = ""; if (els.priceFilter) els.priceFilter.value = ""; if (els.sortFilter) els.sortFilter.value = "featured"; renderCars();
+
+    function formToCar() {
+      return {
+        id: els.carId.value || crypto.randomUUID(),
+        title: els.title.value.trim(),
+        price: Number(els.price.value || 0),
+        year: Number(els.year.value || 0),
+        km: Number(els.km.value || 0),
+        power: Number(els.power.value || 0),
+        engine: Number(els.engine.value || 0),
+        fuel: els.fuel.value,
+        gear: els.gear.value,
+        status: els.status.value,
+        images: parseImages(els.images.value),
+        description: els.description.value.trim()
+      };
+    }
+
+    function fillForm(car) {
+      els.carId.value = car.id || "";
+      els.title.value = car.title || "";
+      els.price.value = car.price || "";
+      els.year.value = car.year || "";
+      els.km.value = car.km || "";
+      els.power.value = car.power || "";
+      els.engine.value = car.engine || "";
+      els.fuel.value = car.fuel || "Diesel";
+      els.gear.value = car.gear || "Automatico";
+      els.status.value = car.status || "Disponible";
+      setFormImages(carImages(car));
+      els.description.value = car.description || "";
+      els.title.focus();
+    }
+
+    function clearForm() {
+      els.carForm.reset();
+      els.carId.value = "";
+      els.fuel.value = "Diesel";
+      els.gear.value = "Automatico";
+      els.status.value = "Disponible";
+      setFormImages([]);
+    }
+
+    els.carForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const car = formToCar();
+      try {
+        els.photoStatus.textContent = "Guardando coche en Supabase...";
+        car.images = await uploadCatalogImages(car.images, car.id);
+        const { error } = await db.from("cars").upsert(car);
+        if (error) throw error;
+        clearForm();
+        await loadCarsFromSupabase();
+        els.photoStatus.textContent = "Coche guardado correctamente.";
+      } catch (error) {
+        console.error(error);
+        alert("No se pudo guardar en Supabase. Revisa conexión, tabla cars, bucket car-images y políticas RLS.");
+      }
     });
 
-    function setFormImages(images) { els.images.value = images.slice(0, 10).join("\n"); renderPhotoPreview(); }
-    function renderPhotoPreview() {
-      if (!els.photoPreview || !els.images) return;
+    els.adminList.addEventListener("click", (event) => {
+      const editId = event.target.dataset.edit;
+      const deleteId = event.target.dataset.delete;
+      if (editId) {
+        const car = cars.find((item) => item.id === editId);
+        if (car) fillForm(car);
+      }
+      if (deleteId && confirm("Borrar este coche del catalogo?")) {
+        db.from("cars").delete().eq("id", deleteId).then(async ({ error }) => {
+          if (error) {
+            console.error(error);
+            alert("No se pudo borrar en Supabase.");
+            return;
+          }
+          await loadCarsFromSupabase();
+        });
+      }
+    });
+
+    els.cars.addEventListener("click", (event) => {
+      const thumb = event.target.closest(".thumb");
+      if (!thumb) return;
+      const main = document.getElementById(thumb.dataset.gallery);
+      if (!main) return;
+      main.src = thumb.dataset.image;
+      thumb.parentElement.querySelectorAll(".thumb").forEach((item) => item.classList.remove("active"));
+      thumb.classList.add("active");
+    });
+
+    els.toggleAdmin.addEventListener("click", () => {
+      els.admin.classList.toggle("hidden");
+      els.toggleAdmin.innerHTML = els.admin.classList.contains("hidden") ? "Gestionar cat&aacute;logo" : "Ocultar gesti&oacute;n";
+      if (!els.admin.classList.contains("hidden")) els.admin.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    els.newCar.addEventListener("click", clearForm);
+    els.images.addEventListener("input", renderPhotoPreview);
+    els.photoPreview.addEventListener("click", (event) => {
+      const mainButton = event.target.closest("[data-photo-main]");
+      const deleteButton = event.target.closest("[data-photo-delete]");
       const images = parseImages(els.images.value);
-      if (!images.length) { els.photoPreview.innerHTML = `<div class="empty">A&ntilde;ade fotos para verlas aqu&iacute;.</div>`; return; }
-      els.photoPreview.innerHTML = images.map((image, index) => `<div class="photo-editor ${index === 0 ? "is-main" : ""}"><img src="${escapeHtml(image)}" alt="Foto ${index + 1}" onerror="this.src='${fallbackImage}'" />${index === 0 ? `<span class="photo-main-badge">Principal</span>` : ""}<div class="photo-editor-actions"><button class="btn secondary" type="button" data-photo-main="${index}" ${index === 0 ? "disabled" : ""}>Principal</button><button class="btn danger" type="button" data-photo-delete="${index}">Borrar</button></div></div>`).join("");
-    }
-    function readFileAsDataUrl(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.addEventListener("load", () => resolve(reader.result)); reader.addEventListener("error", reject); reader.readAsDataURL(file); }); }
-    function loadImage(src) { return new Promise((resolve, reject) => { const image = new Image(); image.addEventListener("load", () => resolve(image)); image.addEventListener("error", reject); image.src = src; }); }
-    async function imageFileToCatalogDataUrl(file) {
-      const dataUrl = await readFileAsDataUrl(file); const image = await loadImage(dataUrl); const maxSide = 1600; const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
-      const width = Math.round(image.width * scale); const height = Math.round(image.height * scale); const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height; canvas.getContext("2d").drawImage(image, 0, 0, width, height); return canvas.toDataURL("image/jpeg", 0.86);
-    }
-    function formToCar() { return { title: els.title.value.trim(), price: Number(els.price.value || 0), year: Number(els.year.value || 0), km: Number(els.km.value || 0), power: Number(els.power.value || 0), engine: Number(els.engine.value || 0), fuel: els.fuel.value, gear: els.gear.value, status: els.status.value, images: parseImages(els.images.value), description: els.description.value.trim() }; }
-    function fillForm(car) { els.carId.value = car.id || ""; els.title.value = car.title || ""; els.price.value = car.price || ""; els.year.value = car.year || ""; els.km.value = car.km || ""; els.power.value = car.power || ""; els.engine.value = car.engine || ""; els.fuel.value = car.fuel || "Diesel"; els.gear.value = car.gear || "Automatico"; els.status.value = car.status || "Disponible"; setFormImages(carImages(car)); els.description.value = car.description || ""; els.title.focus(); }
-    function clearForm() { els.carForm.reset(); els.carId.value = ""; els.fuel.value = "Diesel"; els.gear.value = "Automatico"; els.status.value = "Disponible"; setFormImages([]); }
-    els.carForm?.addEventListener("submit", async (event) => {
-      event.preventDefault(); const payload = formToCar(); let error;
-      if (els.carId.value) ({ error } = await db.from("cars").update(payload).eq("id", els.carId.value));
-      else ({ error } = await db.from("cars").insert(payload));
-      if (error) { alert("Error guardando en Supabase: " + error.message); return; }
-      clearForm(); await loadCarsFromSupabase(); alert("Coche guardado correctamente.");
+      if (mainButton) {
+        const index = Number(mainButton.dataset.photoMain);
+        if (index > 0 && images[index]) {
+          const selected = images.splice(index, 1)[0];
+          setFormImages([selected, ...images]);
+          els.photoStatus.textContent = "Foto principal actualizada. Pulsa Guardar coche.";
+        }
+      }
+      if (deleteButton) {
+        const index = Number(deleteButton.dataset.photoDelete);
+        if (images[index]) {
+          images.splice(index, 1);
+          setFormImages(images);
+          els.photoStatus.textContent = "Foto eliminada. Pulsa Guardar coche.";
+        }
+      }
     });
-    els.adminList?.addEventListener("click", async (event) => {
-      const editId = event.target.dataset.edit; const deleteId = event.target.dataset.delete;
-      if (editId) { const car = cars.find((item) => item.id === editId); if (car) fillForm(car); }
-      if (deleteId && confirm("Borrar este coche del catalogo?")) { const { error } = await db.from("cars").delete().eq("id", deleteId); if (error) { alert("Error borrando: " + error.message); return; } await loadCarsFromSupabase(); }
+    els.choosePhotos.addEventListener("click", () => els.photoInput.click());
+    els.photoInput.addEventListener("change", async () => {
+      const selected = [...els.photoInput.files].filter((file) => file.type.startsWith("image/"));
+      if (!selected.length) return;
+      const existing = parseImages(els.images.value);
+      const available = Math.max(0, 10 - existing.length);
+      const files = selected.slice(0, available);
+      if (!files.length) {
+        els.photoStatus.textContent = "Ya hay 10 fotos en este coche.";
+        els.photoInput.value = "";
+        return;
+      }
+      els.photoStatus.textContent = `Procesando ${files.length} foto${files.length === 1 ? "" : "s"}...`;
+      try {
+        const converted = [];
+        for (const file of files) {
+          converted.push(await imageFileToCatalogDataUrl(file));
+        }
+        setFormImages([...existing, ...converted].slice(0, 10));
+        els.photoStatus.innerHTML = `${converted.length} foto${converted.length === 1 ? "" : "s"} a&ntilde;adida${converted.length === 1 ? "" : "s"}. Pulsa Guardar coche.`;
+      } catch {
+        els.photoStatus.textContent = "No se pudieron cargar esas fotos. Prueba con JPG, PNG o WebP.";
+      } finally {
+        els.photoInput.value = "";
+      }
     });
-    els.toggleAdmin?.addEventListener("click", () => { els.admin.classList.toggle("hidden"); els.toggleAdmin.innerHTML = els.admin.classList.contains("hidden") ? "Gestionar cat&aacute;logo" : "Ocultar gesti&oacute;n"; if (!els.admin.classList.contains("hidden")) els.admin.scrollIntoView({ behavior: "smooth", block: "start" }); });
-    els.newCar?.addEventListener("click", clearForm); els.images?.addEventListener("input", renderPhotoPreview);
-    els.photoPreview?.addEventListener("click", (event) => {
-      const mainButton = event.target.closest("[data-photo-main]"); const deleteButton = event.target.closest("[data-photo-delete]"); const images = parseImages(els.images.value);
-      if (mainButton) { const index = Number(mainButton.dataset.photoMain); if (index > 0 && images[index]) { const selected = images.splice(index, 1)[0]; setFormImages([selected, ...images]); if (els.photoStatus) els.photoStatus.textContent = "Foto principal actualizada. Pulsa Guardar coche."; } }
-      if (deleteButton) { const index = Number(deleteButton.dataset.photoDelete); if (images[index]) { images.splice(index, 1); setFormImages(images); if (els.photoStatus) els.photoStatus.textContent = "Foto eliminada. Pulsa Guardar coche."; } }
+    [els.search, els.fuelFilter, els.gearFilter, els.statusFilter, els.priceFilter, els.sortFilter].forEach((input) => input.addEventListener("input", renderCars));
+    els.clearFilters.addEventListener("click", () => {
+      els.search.value = "";
+      els.fuelFilter.value = "";
+      els.gearFilter.value = "";
+      els.statusFilter.value = "";
+      els.priceFilter.value = "";
+      els.sortFilter.value = "featured";
+      renderCars();
     });
-    els.choosePhotos?.addEventListener("click", () => els.photoInput.click());
-    els.photoInput?.addEventListener("change", async () => {
-      const selected = [...els.photoInput.files].filter((file) => file.type.startsWith("image/")); if (!selected.length) return; const existing = parseImages(els.images.value); const available = Math.max(0, 10 - existing.length); const files = selected.slice(0, available);
-      if (!files.length) { if (els.photoStatus) els.photoStatus.textContent = "Ya hay 10 fotos en este coche."; els.photoInput.value = ""; return; }
-      if (els.photoStatus) els.photoStatus.textContent = `Procesando ${files.length} foto${files.length === 1 ? "" : "s"}...`;
-      try { const converted = []; for (const file of files) converted.push(await imageFileToCatalogDataUrl(file)); setFormImages([...existing, ...converted].slice(0, 10)); if (els.photoStatus) els.photoStatus.innerHTML = `${converted.length} foto${converted.length === 1 ? "" : "s"} a&ntilde;adida${converted.length === 1 ? "" : "s"}. Pulsa Guardar coche.`; }
-      catch { if (els.photoStatus) els.photoStatus.textContent = "No se pudieron cargar esas fotos. Prueba con JPG, PNG o WebP."; }
-      finally { els.photoInput.value = ""; }
-    });
-    els.exportJson?.addEventListener("click", () => { const blob = new Blob([JSON.stringify(cars, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `autoselect-catalogo-${new Date().toISOString().slice(0, 10)}.json`; a.click(); URL.revokeObjectURL(url); });
-    els.importJson?.addEventListener("click", () => els.fileInput.click());
-    els.fileInput?.addEventListener("change", async () => { const file = els.fileInput.files[0]; if (!file) return; try { const imported = JSON.parse(await file.text()); if (!Array.isArray(imported)) { alert("El JSON no tiene formato de catalogo."); return; } const cleaned = imported.map(({ id, created_at, ...car }) => ({ ...car, images: Array.isArray(car.images) ? car.images : [] })); const { error } = await db.from("cars").insert(cleaned); if (error) throw error; await loadCarsFromSupabase(); } catch (error) { alert("No se pudo importar el JSON: " + (error.message || "archivo no válido")); } finally { els.fileInput.value = ""; } });
-    els.resetDemo?.addEventListener("click", async () => { alert("Restaurar demo está desactivado para no borrar tu base de datos por accidente. Puedes importar un JSON si necesitas cargar coches iniciales."); });
-    renderPhotoPreview();
-    loadCarsFromSupabase();
 
-</script>
+    els.exportJson.addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(cars, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `autoselect-catalogo-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    els.importJson.addEventListener("click", () => els.fileInput.click());
+    els.fileInput.addEventListener("change", async () => {
+      const file = els.fileInput.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const imported = JSON.parse(text);
+        if (!Array.isArray(imported)) {
+          alert("El JSON no tiene formato de catalogo.");
+          return;
+        }
+        const rows = imported.map((car) => ({ ...car, id: car.id || crypto.randomUUID() }));
+        const { error } = await db.from("cars").upsert(rows);
+        if (error) throw error;
+        await loadCarsFromSupabase();
+      } catch {
+        alert("No se pudo importar el JSON. Revisa que el archivo sea valido.");
+      } finally {
+        els.fileInput.value = "";
+      }
+    });
+
+    els.resetDemo.addEventListener("click", () => {
+      if (!confirm("Restaurar coches de demostracion? Esto sustituye el catalogo actual.")) return;
+      db.from("cars").delete().neq("id", "00000000-0000-0000-0000-000000000000").then(async ({ error }) => {
+        if (error) {
+          console.error(error);
+          alert("No se pudo vaciar la tabla cars en Supabase.");
+          return;
+        }
+        const { error: insertError } = await db.from("cars").insert(demoCars.map((car) => ({ ...car, id: crypto.randomUUID() })));
+        if (insertError) {
+          console.error(insertError);
+          alert("No se pudo restaurar la demo en Supabase.");
+          return;
+        }
+        clearForm();
+        await loadCarsFromSupabase();
+      });
+    });
+
+    loadCarsFromSupabase();
+    renderPhotoPreview();
+  </script>
 </body>
 </html>
 
