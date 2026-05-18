@@ -492,6 +492,11 @@
       overflow: hidden;
     }
 
+    .admin.requires-login .admin-body,
+    .admin.requires-login .admin-actions {
+      display: none;
+    }
+
     .admin-head {
       padding: 14px;
       display: flex;
@@ -500,6 +505,37 @@
       align-items: center;
       border-bottom: 1px solid var(--line);
       flex-wrap: wrap;
+    }
+
+    .session-line {
+      margin-top: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .auth-panel {
+      padding: 18px;
+      background: #f6f8f3;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .auth-card {
+      max-width: 520px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .auth-card h3 {
+      margin: 0;
+      font-size: 21px;
+    }
+
+    .auth-status {
+      min-height: 20px;
+      color: var(--brand);
+      font-weight: 800;
+      font-size: 13px;
     }
 
     .admin-body {
@@ -787,18 +823,39 @@
 
     <section class="cars" id="cars"></section>
 
-    <section class="admin hidden" id="admin">
+    <section class="admin hidden requires-login" id="admin">
       <div class="admin-head">
         <div>
           <h2>Panel de gesti&oacute;n</h2>
-          <div class="muted">Los cambios se guardan en este navegador. Exporta JSON para hacer copia o mover el cat&aacute;logo.</div>
+          <div class="muted">Los cambios se guardan online en Supabase y actualizan la web p&uacute;blica.</div>
+          <div class="session-line" id="adminSessionText">Acceso protegido.</div>
         </div>
-        <div class="nav-actions">
+        <div class="nav-actions admin-actions" id="adminActions">
           <button class="btn secondary" id="exportJson" type="button">Exportar JSON</button>
           <button class="btn secondary" id="importJson" type="button">Importar JSON</button>
           <button class="btn danger" id="resetDemo" type="button">Restaurar demo</button>
+          <button class="btn secondary" id="signOut" type="button">Salir</button>
         </div>
       </div>
+
+      <section class="auth-panel" id="authPanel">
+        <form class="auth-card" id="authForm">
+          <h3>Iniciar sesi&oacute;n de administrador</h3>
+          <div class="muted">Usa el email y contrase&ntilde;a creados en Supabase Auth.</div>
+          <div class="field">
+            <label for="authEmail">Email</label>
+            <input id="authEmail" type="email" autocomplete="username" required placeholder="admin@autoselect.info" />
+          </div>
+          <div class="field">
+            <label for="authPassword">Contrase&ntilde;a</label>
+            <input id="authPassword" type="password" autocomplete="current-password" required placeholder="Contrase&ntilde;a" />
+          </div>
+          <div class="nav-actions">
+            <button class="btn" type="submit">Entrar</button>
+          </div>
+          <div class="auth-status" id="authStatus"></div>
+        </form>
+      </section>
 
       <div class="admin-body">
         <div class="admin-summary" id="adminSummary"></div>
@@ -971,6 +1028,7 @@
     ];
 
     let cars = [];
+    let isAdminAuthenticated = false;
 
     const els = {
       cars: document.querySelector("#cars"),
@@ -984,6 +1042,14 @@
       clearFilters: document.querySelector("#clearFilters"),
       admin: document.querySelector("#admin"),
       toggleAdmin: document.querySelector("#toggleAdmin"),
+      adminActions: document.querySelector("#adminActions"),
+      adminSessionText: document.querySelector("#adminSessionText"),
+      authPanel: document.querySelector("#authPanel"),
+      authForm: document.querySelector("#authForm"),
+      authEmail: document.querySelector("#authEmail"),
+      authPassword: document.querySelector("#authPassword"),
+      authStatus: document.querySelector("#authStatus"),
+      signOut: document.querySelector("#signOut"),
       carForm: document.querySelector("#carForm"),
       carId: document.querySelector("#carId"),
       title: document.querySelector("#title"),
@@ -1010,12 +1076,43 @@
       fileInput: document.querySelector("#fileInput")
     };
 
+    function setAdminSession(session) {
+      isAdminAuthenticated = Boolean(session?.user);
+      els.admin.classList.toggle("requires-login", !isAdminAuthenticated);
+      els.authPanel.classList.toggle("hidden", isAdminAuthenticated);
+      els.adminActions.classList.toggle("hidden", !isAdminAuthenticated);
+      els.adminSessionText.innerHTML = isAdminAuthenticated
+        ? `Conectado como ${escapeHtml(session.user.email || "administrador")}`
+        : "Inicia sesi&oacute;n para a&ntilde;adir, editar o borrar coches.";
+      if (!isAdminAuthenticated) {
+        clearForm();
+      }
+    }
+
+    function requireAdminSession() {
+      if (isAdminAuthenticated) return true;
+      els.admin.classList.remove("hidden");
+      setAdminSession(null);
+      els.authStatus.innerHTML = "Primero inicia sesi&oacute;n de administrador.";
+      els.authEmail.focus();
+      els.admin.scrollIntoView({ behavior: "smooth", block: "start" });
+      return false;
+    }
+
+    async function initAdminSession() {
+      const { data } = await db.auth.getSession();
+      setAdminSession(data.session);
+      db.auth.onAuthStateChange((_event, session) => {
+        setAdminSession(session);
+      });
+    }
+
     async function loadCarsFromSupabase() {
-      els.stockCount.textContent = "Cargando cat&aacute;logo...";
+      els.stockCount.innerHTML = "Cargando cat&aacute;logo...";
       const { data, error } = await db.from("cars").select("*").order("created_at", { ascending: false });
       if (error) {
         console.error(error);
-        els.stockCount.textContent = "Error cargando Supabase. Revisa la tabla cars y las pol&iacute;ticas RLS.";
+        els.stockCount.innerHTML = "Error cargando Supabase. Revisa la tabla cars y las pol&iacute;ticas RLS.";
         cars = [];
         renderAll();
         return;
@@ -1359,8 +1456,28 @@
       setFormImages([]);
     }
 
+    els.authForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      els.authStatus.textContent = "Comprobando acceso...";
+      const { error } = await db.auth.signInWithPassword({
+        email: els.authEmail.value.trim(),
+        password: els.authPassword.value
+      });
+      if (error) {
+        els.authStatus.innerHTML = "Email o contrase&ntilde;a incorrectos.";
+        return;
+      }
+      els.authPassword.value = "";
+      els.authStatus.textContent = "";
+    });
+
+    els.signOut.addEventListener("click", async () => {
+      await db.auth.signOut();
+    });
+
     els.carForm.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (!requireAdminSession()) return;
       const car = formToCar();
       try {
         els.photoStatus.textContent = "Guardando coche en Supabase...";
@@ -1380,10 +1497,12 @@
       const editId = event.target.dataset.edit;
       const deleteId = event.target.dataset.delete;
       if (editId) {
+        if (!requireAdminSession()) return;
         const car = cars.find((item) => item.id === editId);
         if (car) fillForm(car);
       }
       if (deleteId && confirm("Borrar este coche del catalogo?")) {
+        if (!requireAdminSession()) return;
         db.from("cars").delete().eq("id", deleteId).then(async ({ error }) => {
           if (error) {
             console.error(error);
@@ -1411,7 +1530,10 @@
       if (!els.admin.classList.contains("hidden")) els.admin.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
-    els.newCar.addEventListener("click", clearForm);
+    els.newCar.addEventListener("click", () => {
+      if (!requireAdminSession()) return;
+      clearForm();
+    });
     els.images.addEventListener("input", renderPhotoPreview);
     els.photoPreview.addEventListener("click", (event) => {
       const mainButton = event.target.closest("[data-photo-main]");
@@ -1434,7 +1556,10 @@
         }
       }
     });
-    els.choosePhotos.addEventListener("click", () => els.photoInput.click());
+    els.choosePhotos.addEventListener("click", () => {
+      if (!requireAdminSession()) return;
+      els.photoInput.click();
+    });
     els.photoInput.addEventListener("change", async () => {
       const selected = [...els.photoInput.files].filter((file) => file.type.startsWith("image/"));
       if (!selected.length) return;
@@ -1472,6 +1597,7 @@
     });
 
     els.exportJson.addEventListener("click", () => {
+      if (!requireAdminSession()) return;
       const blob = new Blob([JSON.stringify(cars, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -1481,8 +1607,12 @@
       URL.revokeObjectURL(url);
     });
 
-    els.importJson.addEventListener("click", () => els.fileInput.click());
+    els.importJson.addEventListener("click", () => {
+      if (!requireAdminSession()) return;
+      els.fileInput.click();
+    });
     els.fileInput.addEventListener("change", async () => {
+      if (!requireAdminSession()) return;
       const file = els.fileInput.files[0];
       if (!file) return;
       try {
@@ -1504,6 +1634,7 @@
     });
 
     els.resetDemo.addEventListener("click", () => {
+      if (!requireAdminSession()) return;
       if (!confirm("Restaurar coches de demostracion? Esto sustituye el catalogo actual.")) return;
       db.from("cars").delete().neq("id", "00000000-0000-0000-0000-000000000000").then(async ({ error }) => {
         if (error) {
@@ -1522,6 +1653,7 @@
       });
     });
 
+    initAdminSession();
     loadCarsFromSupabase();
     renderPhotoPreview();
   </script>
